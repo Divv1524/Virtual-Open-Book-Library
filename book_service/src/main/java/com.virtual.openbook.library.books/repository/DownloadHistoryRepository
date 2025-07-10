@@ -1,0 +1,20 @@
+package com.virtual.openbook.library.books.repository;
+
+import com.virtual.openbook.library.books.entity.DownloadHistory;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
+public interface DownloadHistoryRepository extends JpaRepository<DownloadHistory, UUID> {
+    @Query("SELECT d.book.id, COUNT(d) as downloadCount " +
+            "FROM DownloadHistory d " +
+            "WHERE d.downloadDate >= :startDate " +
+            "GROUP BY d.book.id " +
+            "ORDER BY downloadCount DESC")
+    List<Object[]> findTop5BooksOfWeek(@Param("startDate") LocalDateTime startDate, Pageable pageable);
+}
