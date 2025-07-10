@@ -1,0 +1,12 @@
+package com.virtual.openbook.library.books.repository;
+
+import com.virtual.openbook.library.books.entity.Book_Format;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+public interface BookFormatRepository extends JpaRepository<Book_Format, UUID> {
+    List<Book_Format> findByBookId(String bookId);
+
+    Optional<Book_Format> findByBookIdAndFormat(String bookId, String format);
+}
