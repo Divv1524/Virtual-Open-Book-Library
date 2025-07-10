@@ -1,1 +1,24 @@
+package com.virtual.openbook.library.books.dto;
 
+public class BookFormatDTO {
+    private String format;
+    private String filePath;
+public BookFormatDTO(String format, String filePath) {
+        this.format = format;
+        this.filePath = filePath;
+    }
+public String getFormat() {
+        return format;
+    }
+
+    public void setFormat(String format) {
+        this.format = format;
+    }
+public String getFilePath() {
+        return filePath;
+    }
+
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
+    }
+}
