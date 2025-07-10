@@ -1,0 +1,21 @@
+package com.virtual.openbook.library.books.repository;
+
+import com.virtual.openbook.library.books.entity.Book;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface BookRepository extends JpaRepository<Book, String> {
+    List<Book> findByUserId(String userId);
+
+    // ✅ Get books sorted by newest first
+    List<Book> findAllByOrderByAddedDateDesc();
+
+    // ✅ Get books by genre
+    List<Book> findByGenreIgnoreCase(String genre);
+
+    // ✅ Get books by author
+    List<Book> findByAuthorIgnoreCase(String author);
+}
