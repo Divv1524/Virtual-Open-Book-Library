@@ -1,0 +1,18 @@
+package com.virtual.openbook.library.books.entity;
+
+import jakarta.persistence.*;
+import java.util.UUID;
+
+@Entity
+public class Book_Format {
+    @Id
+    @GeneratedValue
+    private UUID id;
+    @ManyToOne
+    @JoinColumn(name = "book_id", nullable = false)
+    private Book book;
+
+    private String format; // e.g., "pdf", "epub", "mobi"
+
+    private String filePath;
+}
