@@ -1,1 +1,102 @@
+package com.virtual.openbook.library.books.dto;
+import com.virtual.openbook.library.books.entity.Book;
+import java.time.LocalDate;
+import java.util.List;
+public class BookDTO {
+    private String id;
+    private String title;
+    private String author;
+    private String genre;
+    private String isbn;
+    private String userId;
+    private int totalDownloads;
+    private LocalDate addedDate;
+    private List<BookFormatDTO> formats;
+
+    public BookDTO(){ }
+    public BookDTO(String id, String title, String author, String genre, String isbn, String userId, int totalDownloads, LocalDate addedDate, List<BookFormatDTO> formats) {
+        this.id = id;
+        this.title = title;
+        this.author = author;
+        this.genre = genre;
+        this.isbn = isbn;
+        this.userId = userId;
+        this.totalDownloads = totalDownloads;
+        this.addedDate = addedDate;
+        this.formats = formats;
+    }
+public List<BookFormatDTO> getFormats() {
+        return formats;
+    }
+public void setFormats(List<BookFormatDTO> formats) {
+        this.formats = formats;
+    }
+public LocalDate getAddedDate() {
+        return addedDate;
+    }
+public void setAddedDate(LocalDate addedDate) {
+        this.addedDate = addedDate;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public BookDTO(Book book) {
+
+    }
+public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+public String getGenre() {
+        return genre;
+    }
+
+    public void setGenre(String genre) {
+        this.genre = genre;
+    }
+public String getIsbn() {
+        return isbn;
+    }
+
+    public void setIsbn(String isbn) {
+        this.isbn = isbn;
+    }
+public int getTotalDownloads() {
+        return totalDownloads;
+    }
+public void setTotalDownloads(int totalDownloads) {
+        this.totalDownloads = totalDownloads;
+    }
+}
+
+
+
+
+
+
+
+
+
 
