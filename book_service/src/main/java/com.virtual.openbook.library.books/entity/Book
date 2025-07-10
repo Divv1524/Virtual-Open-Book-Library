@@ -1,1 +1,47 @@
+package com.virtual.openbook.library.books.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.persistence.*;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+@Entity
+@Table(name = "books")
+@Data
+public class Book {
+    @Id
+    @Column(name = "ID")
+    private String id;
+    @Column(name = "Title" , length = 50, nullable = false)
+    private String title;
+
+    @Column(name = "Author" , length = 50, nullable = false)
+    private String author;
+    @Column(name = "Genre", nullable = false)
+    private String genre;
+
+    @Column(name = "ISBN", nullable = false)
+    private String isbn;
+    @Column(name = "user_id")
+    private  String userId;
+
+
+    @Column(name = "total_downloads", nullable = false)
+    private int totalDownloads=0;
+    @Column(name = "added_date", updatable = false)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+    private LocalDate addedDate;
+
+    @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Book_Format> formats = new ArrayList<>();
+   
+    }
+
+
+    
+
+    
+
+
+    
