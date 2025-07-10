@@ -1,1 +1,118 @@
+package com.virtual.openbook.library.books.controller;
+
+import com.virtual.openbook.library.books.dto.BookDTO;
+import com.virtual.openbook.library.books.entity.Book_Format;
+import com.virtual.openbook.library.books.service.BookService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/books")
+public class BookController {
+
+    @Autowired
+    private BookService bookService;
+
+    @Autowired
+    private UserFeignClient userFeignClient; // Inject Feign Client
+
+
+    @PostMapping("/add")
+    public ResponseEntity<BookDTO> addBook(@RequestBody BookDTO bookDTO) {
+        return ResponseEntity.ok(bookService.addBook(bookDTO));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<BookDTO> getBookById(@PathVariable String id) {
+        BookDTO bookDTO = bookService.getBookById(id);
+
+        // Check if book is found
+        if (bookDTO == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+
+        return ResponseEntity.ok(bookDTO);
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<BookDTO>> getBooksByUser(@PathVariable String userId) {
+        List<BookDTO> books = bookService.getBooksByUser(userId);
+        return ResponseEntity.ok(books);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<BookDTO>> getAllBooks() {
+
+        return ResponseEntity.ok(bookService.getAllBooks());
+    }
+    @PutMapping("/{bookId}")
+    public ResponseEntity<BookDTO> updateBook(@PathVariable String bookId, @RequestBody BookDTO bookDTO) {
+        return ResponseEntity.ok(bookService.updateBook(bookId, bookDTO));
+    }
+
+    @DeleteMapping("/{bookId}/{userId}")
+    public ResponseEntity<Void> deleteBook(
+            @PathVariable String bookId,
+            @PathVariable String userId) {
+        bookService.deleteBook(bookId, userId);
+        return ResponseEntity.noContent().build();
+    }
+
+
+    @PostMapping("/{bookId}/formats")
+    public ResponseEntity<String> addBookFormat(@PathVariable String bookId,
+                                                @RequestParam String format,
+                                                @RequestParam String filePath) {
+        bookService.addBookFormat(bookId, format, filePath);
+        return ResponseEntity.ok("Format added successfully.");
+    }
+
+    @GetMapping("/{bookId}/formats")
+    public ResponseEntity<List<Book_Format>> getBookFormats(@PathVariable String bookId) {
+        return ResponseEntity.ok(bookService.getFormatsByBookId(bookId));
+    }
+
+    // Download book by specific format
+    @GetMapping("/download/{bookId}/format/{format}/user/{userId}")
+    public ResponseEntity<String> downloadBook(
+            @PathVariable String bookId,
+            @PathVariable String format,
+            @PathVariable String userId) {
+        return bookService.downloadBook(bookId, format, userId);
+    }
+
+    //  a. Recommend books from all genres
+    @GetMapping("/recommendations/all")
+    public ResponseEntity<List<BookDTO>> getRecommendedBooks() {
+        return ResponseEntity.ok(bookService.getRecommendedBooks());
+    }
+
+    //  b. Recommend newly launched books
+    @GetMapping("/recommendations/new")
+    public ResponseEntity<List<BookDTO>> getNewLaunches() {
+        return ResponseEntity.ok(bookService.getNewLaunches());
+    }
+
+    //  c. Recommend books from a specific genre
+    @GetMapping("/recommendations/genre/{genre}")
+    public ResponseEntity<List<BookDTO>> getBooksByGenre(@PathVariable String genre) {
+        return ResponseEntity.ok(bookService.getBooksByGenre(genre));
+    }
+
+    //  d. Recommend books by a specific author
+    @GetMapping("/recommendations/author/{author}")
+    public ResponseEntity<List<BookDTO>> getBooksByAuthor(@PathVariable String author) {
+        return ResponseEntity.ok(bookService.getBooksByAuthor(author));
+    }
+
+    @GetMapping("/top5")
+    public ResponseEntity<List<BookDTO>> getTop5Books() {
+        return ResponseEntity.ok(bookService.getTop5BooksOfWeek());
+    }
+
+}
 
