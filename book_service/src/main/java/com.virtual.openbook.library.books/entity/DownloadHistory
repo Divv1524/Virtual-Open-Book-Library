@@ -1,0 +1,28 @@
+package com.virtual.openbook.library.books.entity;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+import java.util.UUID;
+@Entity
+@Table(name = "download_history")
+@Data
+public class DownloadHistory
+{
+    @Id
+    @GeneratedValue
+    private UUID id;
+    @Column(name = "user_id", nullable = false)
+    private String userId;  // Store user UUID instead of entity reference
+
+    @ManyToOne
+    @JoinColumn(name = "book_id", nullable = false)
+    private Book book;
+    @Column(name = "download_date", nullable = false)
+    private LocalDateTime downloadDate = LocalDateTime.now();
+}
+
+    
+
+    
+
+
