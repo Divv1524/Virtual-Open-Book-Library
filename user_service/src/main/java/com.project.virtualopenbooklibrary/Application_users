@@ -1,0 +1,17 @@
+package com.project.virtualopenbooklibrary;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.context.annotation.ComponentScan;
+
+@SpringBootApplication
+@EnableFeignClients
+@ComponentScan
+public class Application_users {
+
+	public static void main(String[] args) {
+		SpringApplication.run(Application_users.class, args);
+	}
+
+}
