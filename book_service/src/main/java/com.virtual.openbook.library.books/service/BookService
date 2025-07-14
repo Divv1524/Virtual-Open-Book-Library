@@ -1,0 +1,36 @@
+package com.virtual.openbook.library.books.service;
+
+import com.virtual.openbook.library.books.dto.BookDTO;
+import com.virtual.openbook.library.books.entity.Book_Format;
+import org.springframework.http.ResponseEntity;
+
+import java.util.List;
+
+public interface BookService {
+    BookDTO addBook(BookDTO bookDTO);
+BookDTO getBookById(String id);
+
+    List<BookDTO> getAllBooks();
+
+    BookDTO updateBook(String id, BookDTO bookDTO);
+
+    void deleteBook(String bookId, String userId);
+
+    List<BookDTO> getBooksByUser(String userId);
+
+    ResponseEntity<String> downloadBook(String bookId, String format, String userId);
+List<BookDTO> getRecommendedBooks(); // All genres
+
+    List<BookDTO> getNewLaunches(); // Newest books first
+
+    List<BookDTO> getBooksByGenre(String genre); // Specific genre
+
+    List<BookDTO> getBooksByAuthor(String author);// Author-specific
+
+    List<BookDTO> getTop5BooksOfWeek();
+
+    List<Book_Format> getFormatsByBookId(String bookId);
+
+    void addBookFormat(String bookId, String format, String filePath);
+
+}
