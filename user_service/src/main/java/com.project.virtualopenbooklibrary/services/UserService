@@ -1,0 +1,31 @@
+package com.project.virtualopenbooklibrary.services;
+
+import com.project.virtualopenbooklibrary.dto.BookDTO;
+import com.project.virtualopenbooklibrary.dto.UserDTO;
+import java.util.List;
+
+public interface UserService {
+    UserDTO saveUser(UserDTO userDTO);
+
+    List<UserDTO> getAllUser();
+
+    UserDTO getUser(String userId);
+
+    void deleteById(String id);
+
+    void updateUser(String id, UserDTO newUserDTO);
+
+    BookDTO addBookForUser(String userId, BookDTO bookDTO);
+
+    BookDTO updateBookForUser(String bookId, BookDTO bookDTO);
+
+    void deleteBookForUser(String userId, String bookId);
+
+    List<BookDTO> getRecommendedBooksForUser();
+
+    List<BookDTO> getNewLaunchesForUser();
+
+    List<BookDTO> getBooksByGenreForUser(String genre);
+
+    List<BookDTO> getBooksByAuthorForUser(String author);
+}
