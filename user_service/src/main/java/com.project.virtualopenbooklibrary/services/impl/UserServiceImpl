@@ -1,0 +1,286 @@
+package com.project.virtualopenbooklibrary.services.impl;
+
+import com.project.virtualopenbooklibrary.dto.BookDTO;
+import com.project.virtualopenbooklibrary.dto.UserDTO;
+import com.project.virtualopenbooklibrary.entity.Role;
+import com.project.virtualopenbooklibrary.entity.User;
+import com.project.virtualopenbooklibrary.exception.*;
+import com.project.virtualopenbooklibrary.external.BookFeignClient;
+import com.project.virtualopenbooklibrary.repository.UserRepository;
+import com.project.virtualopenbooklibrary.services.UserService;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+public class UserServiceImpl implements UserService {
+private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
+
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private BookFeignClient bookFeignClient;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Override
+    public UserDTO saveUser(UserDTO userDTO) {
+
+        if (userRepository.existsByUsername(userDTO.getUsername())) {
+            throw new UserAlreadyExistsException("Username is already taken!");
+        }
+        // Convert DTO to Entity
+        User user = new User();
+        user.setId(UUID.randomUUID().toString()); // Generate unique user ID
+        user.setUsername(userDTO.getUsername());
+        user.setName(userDTO.getName());
+        user.setEmail(userDTO.getEmail());
+        user.setPassword(passwordEncoder.encode(userDTO.getPassword())); // 🔥 Encode Password
+        if (userDTO.getRole() != null) {
+            user.setRole(Role.valueOf(userDTO.getRole().name())); // Enum to Enum
+        } else {
+            System.out.println("Role is null in DTO");
+        }
+        user.setLastDownloadDate(LocalDate.now());
+
+        // Save to database
+        User savedUser = userRepository.save(user);
+
+        // Convert Entity back to DTO
+        return new UserDTO(savedUser.getId(), savedUser.getUsername(), savedUser.getName(), savedUser.getEmail(), new ArrayList<>(), savedUser.getPassword(), savedUser.getLastDownloadDate(), savedUser.getRole());
+    }
+
+@Override
+    public UserDTO saveUser(UserDTO userDTO) {
+
+        if (userRepository.existsByUsername(userDTO.getUsername())) {
+            throw new UserAlreadyExistsException("Username is already taken!");
+        }
+        // Convert DTO to Entity
+        User user = new User();
+        user.setId(UUID.randomUUID().toString()); // Generate unique user ID
+        user.setUsername(userDTO.getUsername());
+        user.setName(userDTO.getName());
+        user.setEmail(userDTO.getEmail());
+        user.setPassword(passwordEncoder.encode(userDTO.getPassword())); // 🔥 Encode Password
+        if (userDTO.getRole() != null) {
+            user.setRole(Role.valueOf(userDTO.getRole().name())); // Enum to Enum
+        } else {
+            System.out.println("Role is null in DTO");
+        }
+        user.setLastDownloadDate(LocalDate.now());
+
+        // Save to database
+        User savedUser = userRepository.save(user);
+
+        // Convert Entity back to DTO
+        return new UserDTO(savedUser.getId(), savedUser.getUsername(), savedUser.getName(), savedUser.getEmail(), new ArrayList<>(), savedUser.getPassword(), savedUser.getLastDownloadDate(), savedUser.getRole());
+    }
+
+@Override
+    public UserDTO saveUser(UserDTO userDTO) {
+
+        if (userRepository.existsByUsername(userDTO.getUsername())) {
+            throw new UserAlreadyExistsException("Username is already taken!");
+        }
+        // Convert DTO to Entity
+        User user = new User();
+        user.setId(UUID.randomUUID().toString()); // Generate unique user ID
+        user.setUsername(userDTO.getUsername());
+        user.setName(userDTO.getName());
+        user.setEmail(userDTO.getEmail());
+        user.setPassword(passwordEncoder.encode(userDTO.getPassword())); // 🔥 Encode Password
+        if (userDTO.getRole() != null) {
+            user.setRole(Role.valueOf(userDTO.getRole().name())); // Enum to Enum
+        } else {
+            System.out.println("Role is null in DTO");
+        }
+        user.setLastDownloadDate(LocalDate.now());
+
+        // Save to database
+        User savedUser = userRepository.save(user);
+
+        // Convert Entity back to DTO
+        return new UserDTO(savedUser.getId(), savedUser.getUsername(), savedUser.getName(), savedUser.getEmail(), new ArrayList<>(), savedUser.getPassword(), savedUser.getLastDownloadDate(), savedUser.getRole());
+    }
+
+@Override
+    public List<UserDTO> getAllUser() {
+        List<User> users = userRepository.findAll();
+
+        return users.stream().map(user -> {
+            List<BookDTO> books = bookFeignClient.getBooksByUser(user.getId()); // Fetch books
+            return new UserDTO(user.getId(), user.getUsername(), user.getName(), user.getEmail(), books, user.getPassword(), user.getLastDownloadDate(), user.getRole());
+        }).collect(Collectors.toList());
+    }
+    @Override
+    public UserDTO getUser(String userId) {
+        // Get currently authenticated user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String authenticatedUsername = authentication.getName();
+
+        // Fetch user from DB
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id " + userId));
+
+        // Check if the authenticated user is requesting their own details OR is an admin
+        if (!user.getUsername().equals(authenticatedUsername) && !authentication.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"))) {
+            throw new AccessDeniedException("You are not allowed to access this user's details");
+        }
+
+        /// Fetch books from Book Service using Feign Client with exception handling
+        List<BookDTO> books = new ArrayList<>();
+        try {
+            books = bookFeignClient.getBooksByUser(userId);
+            logger.info("Books fetched for user {}: {}", userId, books);
+        } catch (Exception e) {
+            logger.error("Failed to fetch books for user {} from Book Service", userId, e);
+            throw new BookServiceException("Failed to fetch books for user " + userId, e);
+        }
+        return new UserDTO(
+                user.getId(),
+                user.getName(),
+                user.getUsername(),
+                user.getEmail(),
+                books,
+                user.getPassword(),
+                user.getLastDownloadDate(),
+                user.getRole()
+        );
+    }
+    //  Add a book for a user
+    @Override
+    public BookDTO addBookForUser(String userId, BookDTO bookDTO) {
+        // Ensure user exists
+        userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id " + userId));
+
+        // Set userId in book before sending request
+        bookDTO.setUserId(userId);
+
+        // Call Book Service via Feign Client
+        return bookFeignClient.addBook(bookDTO);
+
+    }
+    // Update a book for a user
+    @Override
+    public BookDTO updateBookForUser(String bookId, BookDTO bookDTO) {
+        try {
+            // Directly call Book Service through Feign Client
+            return bookFeignClient.updateBook(bookId, bookDTO);
+        } catch (Exception e) {
+            String errorMessage = e.getMessage();
+
+            // Handle specific errors from Book Service if book not found or does not belong to user
+            if (errorMessage != null && errorMessage.contains("Book not found")) {
+                throw new ResourceNotFoundException("Book not found with ID " + bookId);
+            } else if (errorMessage != null && errorMessage.contains("does not belong to this user")) {
+                throw new ResourceNotFoundException("Book does not belong to this user");
+            }
+
+            throw new BookServiceException("Failed to update book with ID " + bookId, e);
+        }
+    }
+    // Delete a book for a user
+    @Override
+    public void deleteBookForUser(String userId, String bookId) {
+    try {
+            bookFeignClient.deleteBook(bookId, userId);
+        } catch (Exception e) {
+            String errorMessage = e.getMessage();
+        // Handle specific errors from Book Service
+        if (errorMessage != null && errorMessage.contains("Book not found")) {
+            throw new ResourceNotFoundException("Book not found with ID " + bookId);
+        } else if (errorMessage != null && errorMessage.contains("Book does not belong to this user")) {
+            throw new ResourceNotFoundException("Book does not belong to this user");
+        }
+
+        throw new BookServiceException("Failed to delete book with ID " + bookId, e);
+    }
+}
+@Override
+    public void updateUser(String id, UserDTO newUserDTO) {
+        User existingUser = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("User does not exist"));
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
+
+        // Update only non-null fields
+        if (newUserDTO.getUsername() != null) {
+            existingUser.setUsername(newUserDTO.getUsername());
+        }
+        if (newUserDTO.getName() != null) {
+            existingUser.setName(newUserDTO.getName());
+        }
+        if (newUserDTO.getEmail() != null) {
+            existingUser.setEmail(newUserDTO.getEmail());
+        }
+        if (newUserDTO.getRole() != null && isAdmin) {
+            existingUser.setRole(newUserDTO.getRole());
+        }
+
+        userRepository.save(existingUser);
+    }
+@Override
+    public void deleteById(String id) {
+        if (!userRepository.existsById(id)) {
+            throw new UserNotFoundException("User not found with id: " + id);
+        }
+        userRepository.deleteById(id);
+    }
+    @Override
+    public List<BookDTO> getRecommendedBooksForUser() {
+        try {
+            return bookFeignClient.getRecommendedBooks();
+        } catch (Exception e) {
+            logger.error("Failed to fetch recommended books from Book Service", e);
+            throw new BookServiceException("Failed to fetch recommended books", e);
+        }
+    }
+
+    @Override
+    public List<BookDTO> getNewLaunchesForUser() {
+        try {
+            return bookFeignClient.getNewLaunches();
+        } catch (Exception e) {
+            logger.error("Failed to fetch new launches from Book Service", e);
+            throw new BookServiceException("Failed to fetch new launches", e);
+        }
+    }
+    @Override
+    public List<BookDTO> getBooksByGenreForUser(String genre) {
+        try {
+            return bookFeignClient.getBooksByGenre(genre);
+        } catch (Exception e) {
+            logger.error("Failed to fetch books by genre '{}' from Book Service", genre, e);
+            throw new BookServiceException("Failed to fetch books by genre " + genre, e);
+        }
+    }
+
+    @Override
+    public List<BookDTO> getBooksByAuthorForUser(String author) {
+        try {
+            return bookFeignClient.getBooksByAuthor(author);
+        } catch (Exception e) {
+            logger.error("Failed to fetch books by author '{}' from Book Service", author, e);
+            throw new BookServiceException("Failed to fetch books by author " + author, e);
+        }
+    }
+    }
