@@ -1,0 +1,6 @@
+package com.project.virtualopenbooklibrary.entity;
+
+public enum Role {
+    USER,
+    ADMIN
+}
