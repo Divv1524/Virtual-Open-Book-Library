@@ -1,0 +1,360 @@
+package com.virtual.openbook.library.books.service.impl;
+
+import com.virtual.openbook.library.books.entity.Book;
+import com.virtual.openbook.library.books.entity.Book_Format;
+import com.virtual.openbook.library.books.entity.DownloadHistory;
+import com.virtual.openbook.library.books.exception.BookNotFoundException;
+import com.virtual.openbook.library.books.dto.BookDTO;
+import com.virtual.openbook.library.books.exception.ResourceNotFoundException;
+import com.virtual.openbook.library.books.repository.BookFormatRepository;
+import com.virtual.openbook.library.books.repository.BookRepository;
+import com.virtual.openbook.library.books.repository.DownloadHistoryRepository;
+import com.virtual.openbook.library.books.service.BookService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import com.virtual.openbook.library.books.dto.BookFormatDTO;
+import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.stream.Collectors;
+@Service
+public class BookServiceImpl implements BookService {
+    @Autowired
+    private BookRepository bookRepository;
+    @Autowired
+    private DownloadHistoryRepository downloadHistoryRepository;
+
+    @Autowired
+    private final RedisTemplate<String, Integer> redisTemplate;
+
+    @Autowired
+    private BookFormatRepository bookFormatRepository;
+
+    public BookServiceImpl(RedisTemplate<String, Integer> redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
+    @Override
+    public BookDTO addBook(BookDTO bookDTO) {
+        // Convert DTO to Entity
+        Book book = new Book();
+        book.setId(UUID.randomUUID().toString()); // Generate unique book ID
+        book.setTitle(bookDTO.getTitle());
+        book.setAuthor(bookDTO.getAuthor());
+        book.setGenre(bookDTO.getGenre());
+        book.setIsbn(bookDTO.getIsbn());
+        book.setUserId(bookDTO.getUserId());
+        book.setAddedDate(bookDTO.getAddedDate() != null ? bookDTO.getAddedDate() : LocalDate.now());
+        book.setTotalDownloads(bookDTO.getTotalDownloads());
+        // Save to database
+        Book savedBook = bookRepository.save(book);
+        // Save Book Formats if Provided
+        if (bookDTO.getFormats() != null && !bookDTO.getFormats().isEmpty()) {
+            List<Book_Format> bookFormats = bookDTO.getFormats().stream()
+                    .map(formatDTO -> new Book_Format(savedBook, formatDTO.getFormat(), formatDTO.getFilePath()))
+                    .collect(Collectors.toList());
+
+            bookFormatRepository.saveAll(bookFormats);
+        }
+        // Save to database
+        Book savedBook = bookRepository.save(book);
+        // Save Book Formats if Provided
+        if (bookDTO.getFormats() != null && !bookDTO.getFormats().isEmpty()) {
+            List<Book_Format> bookFormats = bookDTO.getFormats().stream()
+                    .map(formatDTO -> new Book_Format(savedBook, formatDTO.getFormat(), formatDTO.getFilePath()))
+                    .collect(Collectors.toList());
+
+            bookFormatRepository.saveAll(bookFormats);
+        }
+        @Override
+    public BookDTO getBookById(String id) {
+
+        // Validate ID
+        if (id == null || id.trim().isEmpty()) {
+            throw new IllegalArgumentException("Book ID cannot be null or empty");
+        }
+
+        // Fetch book from repository
+        Book book = bookRepository.findById(id)
+                .orElseThrow(() -> new BookNotFoundException("Book not found"));
+        // Fetch associated formats
+        List<BookFormatDTO> formats = book.getFormats().stream()
+                .map(format -> new BookFormatDTO(format.getFormat(), format.getFilePath()))
+                .collect(Collectors.toList());
+        // Create and return BookDTO with formats
+        return new BookDTO(
+                book.getId(),
+                book.getTitle(),
+                book.getAuthor(),
+                book.getGenre(),
+                book.getIsbn(),
+                book.getUserId(),
+                book.getTotalDownloads(),
+                book.getAddedDate(),
+                formats
+        );
+    }
+
+
+    @Override
+    public List<BookDTO> getAllBooks() {
+        return bookRepository.findAll().stream()
+                .map(book -> {
+                    // Fetch associated formats for each book
+                    List<BookFormatDTO> formats = book.getFormats().stream()
+                            .map(format -> new BookFormatDTO(format.getFormat(), format.getFilePath()))
+                            .collect(Collectors.toList());
+                            // Return the constructed BookDTO
+                    return new BookDTO(
+                            book.getId(),
+                            book.getTitle(),
+                            book.getAuthor(),
+                            book.getGenre(),
+                            book.getIsbn(),
+                            book.getUserId(),
+                            book.getTotalDownloads(),
+                            book.getAddedDate(),
+                            formats
+                    );
+                })
+                .collect(Collectors.toList());
+    }
+@Override
+//    @Cacheable()
+    public List<BookDTO> getBooksByUser(String userId) {
+
+        // Validate ID
+        if (userId == null || userId.trim().isEmpty()) {
+            throw new IllegalArgumentException("User ID cannot be null or empty");
+        }
+
+        // Fetch books based on userId
+        List<Book> books = bookRepository.findByUserId(userId);
+
+        // Convert to DTOs with formats
+        return books.stream()
+                .map(book -> {
+                                  // Fetch formats for each book
+                    List<BookFormatDTO> formats = bookFormatRepository.findByBookId(book.getId()).stream()
+                            .map(format -> new BookFormatDTO(format.getFormat(), format.getFilePath()))
+                            .collect(Collectors.toList());
+
+                    // Create BookDTO with formats
+                    return new BookDTO(
+                            book.getId(),
+                            book.getTitle(),
+                            book.getAuthor(),
+                            book.getGenre(),
+                            book.getIsbn(),
+                            book.getUserId(),
+                            book.getTotalDownloads(),
+                            book.getAddedDate(),
+                            formats // ✅ Pass formats here
+                    );
+                })
+                .collect(Collectors.toList());
+    }
+
+@Override
+    public BookDTO updateBook(String book_Id, BookDTO bookDTO) {
+
+        // Validate ID
+        if (book_Id == null || book_Id.trim().isEmpty()) {
+            throw new IllegalArgumentException("Book ID cannot be null or empty");
+        }
+
+        Book book = bookRepository.findById(book_Id).orElseThrow(() -> new BookNotFoundException("Book not found"));
+        // Check if the book belongs to the user
+        if (!book.getUserId().equals(bookDTO.getUserId())) {
+            throw new ResourceNotFoundException("Book does not belong to this user");
+        }
+        book.setTitle(bookDTO.getTitle());
+        book.setAuthor(bookDTO.getAuthor());
+        book.setGenre(bookDTO.getGenre());
+        book.setIsbn(bookDTO.getIsbn());
+        Book updatedBook = bookRepository.save(book);
+        return new BookDTO(updatedBook.getId(), updatedBook.getTitle(), updatedBook.getAuthor(), updatedBook.getGenre(), updatedBook.getIsbn(), book.getUserId(), book.getTotalDownloads(), book.getAddedDate(), bookDTO.getFormats());
+    }
+@Override
+    public void deleteBook(String bookId, String userId) {
+        // Validate ID
+        if (bookId == null || bookId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Book ID cannot be null or empty");
+        }
+        // Validate ID
+        if (userId == null || userId.trim().isEmpty()) {
+            throw new IllegalArgumentException("User ID cannot be null or empty");
+        }
+
+        // Fetch and validate the book
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new BookNotFoundException("Book not found with ID " + bookId));
+
+        // Check if the book belongs to the provided user
+        if (!book.getUserId().equals(userId)) {
+            throw new ResourceNotFoundException("Book does not belong to this user");
+        }
+
+        // Delete the book from the repository
+        bookRepository.delete(book);
+    }
+@Transactional
+    @Override
+    public ResponseEntity<String> downloadBook(String bookId, String format, String userId) {
+
+        // Validate bookId
+        if (bookId == null || bookId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Book ID cannot be null or empty");
+        }
+
+        // Validate userId
+        if (userId == null || userId.trim().isEmpty()) {
+            throw new IllegalArgumentException("User ID cannot be null or empty");
+        }
+
+        // Check Daily Download Limit using Redis
+        Integer dailyDownloadCount = redisTemplate.opsForValue().get("downloads:" + userId);
+        dailyDownloadCount = dailyDownloadCount != null ? dailyDownloadCount : 0;
+
+        if (dailyDownloadCount >= 3) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body("Daily download limit reached.");
+        }
+
+        // Check Concurrent Downloads using Redis
+        Integer activeDownloads = redisTemplate.opsForValue().get("activeDownloads:" + userId);
+        activeDownloads = activeDownloads != null ? activeDownloads : 0;
+
+        if (activeDownloads >= 3) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body("Maximum concurrent downloads reached.");
+        }
+        // Check if the requested book format is available
+        Book_Format formatDetails = bookFormatRepository.findByBookIdAndFormat(bookId, format.toLowerCase())
+                .orElseThrow(() -> new ResourceNotFoundException("Format not available for the book"));
+
+        // Fetch the Book entity first
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id " + bookId));
+
+        // Update the download history creation
+        DownloadHistory downloadHistory = new DownloadHistory(userId, book, LocalDateTime.now());
+        downloadHistoryRepository.save(downloadHistory);
+
+        // Increment Total Downloads in Book Table
+        book.setTotalDownloads(book.getTotalDownloads() + 1);
+        bookRepository.save(book);
+
+        // Update Redis Counters
+        redisTemplate.opsForValue().increment("downloads:" + userId);  // Daily download count
+        redisTemplate.opsForValue().increment("activeDownloads:" + userId);  // Active downloads
+
+        //Simulate Book Download
+        String filePath = formatDetails.getFilePath();
+        return ResponseEntity.ok("Downloading book from: " + filePath);
+    }
+// Get Recommended Books (All genres - Random Selection)
+    @Override
+    public List<BookDTO> getRecommendedBooks() {
+        List<Book> books = bookRepository.findAll();
+        return books.stream()
+                .map(this::convertToDTO)
+                .limit(10) // Return 10 random books
+                .collect(Collectors.toList());
+    }
+
+    // Get New Launches (Newest Books First)
+    @Override
+    public List<BookDTO> getNewLaunches() {
+        List<Book> books = bookRepository.findAllByOrderByAddedDateDesc();
+        return books.stream()
+                .map(this::convertToDTO)
+                .limit(10) // Return latest 10 books
+                .collect(Collectors.toList());
+    }
+
+// Get Books By Genre (User-selected genre)
+    @Override
+    public List<BookDTO> getBooksByGenre(String genre) {
+        List<Book> books = bookRepository.findByGenreIgnoreCase(genre);
+        return books.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    // Get Books By Author
+    @Override
+    public List<BookDTO> getBooksByAuthor(String author) {
+        List<Book> books = bookRepository.findByAuthorIgnoreCase(author);
+        return books.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+// 🔹 Convert Book Entity to DTO (Without BookMapper)
+    private BookDTO convertToDTO(Book book) {
+        BookDTO dto = new BookDTO();
+        dto.setId(book.getId());
+        dto.setTitle(book.getTitle());
+        dto.setAuthor(book.getAuthor());
+        dto.setGenre(book.getGenre());
+        dto.setTotalDownloads(book.getTotalDownloads());
+        dto.setAddedDate(book.getAddedDate());
+        return dto;
+    }
+
+    public List<BookDTO> getTop5BooksOfWeek() {
+        LocalDateTime startDate = LocalDateTime.now().minusDays(7);
+        Pageable pageable = PageRequest.of(0, 5); // Get only top 5 books
+        List<Object[]> results = downloadHistoryRepository.findTop5BooksOfWeek(startDate, pageable);
+
+        return results.stream()
+                .map(result -> {
+                    try {
+                        String bookId = String.valueOf(result[0]);  // Ensure it's a String
+                        int totalDownloads = ((Number) result[1]).intValue();  // Convert count to int
+
+                        return bookRepository.findById(bookId)
+                                .map(book -> new BookDTO(
+                                        book.getId(),
+                                        book.getTitle(),
+                                        book.getAuthor(),
+                                        book.getGenre(),
+                                        book.getIsbn(),
+                                        book.getUserId(),
+                                        totalDownloads,
+                                        book.getAddedDate(),
+                                        bookFormatRepository.findByBookId(book.getId()).stream()
+                                                .map(format -> new BookFormatDTO(format.getFormat(), format.getFilePath()))
+                                                .collect(Collectors.toList())
+                                )).orElse(null);
+                    } catch (Exception e) {
+                        System.err.println("Error fetching book: " + e.getMessage());
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull) // Remove nulls safely
+                .collect(Collectors.toList());
+    }
+public List<Book_Format> getFormatsByBookId(String bookId) {
+        return bookFormatRepository.findByBookId(bookId);
+    }
+
+    public void addBookFormat(String bookId, String format, String filePath) {
+        Book book = bookRepository.findById(String.valueOf(bookId))
+                .orElseThrow(() -> new BookNotFoundException("Book not found"));
+        Book_Format bookFormat = new Book_Format();
+        bookFormat.setBook(book);
+        bookFormat.setFormat(format);
+        bookFormat.setFilePath(filePath);
+        bookFormatRepository.save(bookFormat);
+    }
+
+
+}
