@@ -1,0 +1,78 @@
+package com.project.virtualopenbooklibrary.security;
+
+import io.jsonwebtoken.ExpiredJwtException;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+
+@Component
+public class JwtRequestFilter extends OncePerRequestFilter { //filter each request one time-> means if we are transferring the request from one controller to another then it will be filtered only once
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @Autowired
+    private UserDetailsService userDetailsService;
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
+        {
+            final String authorizationHeader = request.getHeader("Authorization"); //fetching header from the request that we are giving in postman
+            logger.info("DEBUG: Incoming request - " + request.getRequestURI());
+            logger.info("DEBUG: Authorization Header -> " + authorizationHeader);
+            String username = null;
+            String jwt = null;
+            if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+                jwt = authorizationHeader.substring(7);
+                try {
+                    username = jwtUtil.extractUsername(jwt); //fetch username
+                } catch (ExpiredJwtException e) {
+                    logger.warn("JWT token has expired.");
+                    System.out.println("DEBUG: JWT token has expired.");
+                    return;
+                } catch (Exception e) {
+                    logger.warn("Invalid JWT Token.");
+                    System.out.println("DEBUG: Invalid JWT token.");
+                    return;
+                }
+            }
+            //username is fetched and now check
+
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                //if username is not null fetch userdetails and validate it
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+                //validate fetched username from url and usernme store in DB
+                if (jwtUtil.isTokenValid(jwt, userDetails.getUsername())) {
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    //create object of UsernamePasswordAuthenticationToken ->It creates an authentication token (authToken) for the user.
+//                   userDetails: This contains username, password, and roles (fetched from UserDetailsService).
+//                   null: Since JWT authentication does not involve a password at this stage, we pass null.
+//                   userDetails.getAuthorities(): Fetches user roles (ROLE_USER, ROLE_ADMIN, etc.).
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                    //Stores the authentication token (authToken) in Spring Security’s context.
+                }
+                else {
+                    logger.warn("Invalid JWT token.");
+                    return;
+                }
+
+            }
+            chain.doFilter(request, response); //for further filters we are sending request and response
+        }
+    }
+}
+
