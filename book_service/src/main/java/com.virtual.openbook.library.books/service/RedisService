@@ -1,0 +1,37 @@
+package com.virtual.openbook.library.books.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+
+@Service
+public class RedisService {
+    @Autowired
+    private RedisTemplate<String, Integer> integerRedisTemplate;
+
+
+    public void saveIntegerData(String key, Integer value) {
+        integerRedisTemplate.opsForValue().set(key, value);
+    }
+
+    public Integer getIntegerData(String key) {
+        return integerRedisTemplate.opsForValue().get(key);
+    }
+
+    public void deleteIntegerData(String key) {
+        integerRedisTemplate.delete(key);
+    }
+
+    // Increment Integer value
+    public Integer incrementIntegerData(String key) {
+        Long result = integerRedisTemplate.opsForValue().increment(key);
+        return result != null ? result.intValue() : null;
+    }
+
+    // Decrement Integer value
+    public Integer decrementIntegerData(String key) {
+        Long result = integerRedisTemplate.opsForValue().decrement(key);
+        return result != null ? result.intValue() : null;
+    }
+
+}
